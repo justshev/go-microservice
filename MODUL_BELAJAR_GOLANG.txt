@@ -1,0 +1,87 @@
+# MODUL BELAJAR GOLANG: MICROSERVICE TEMPLATE
+================================================
+
+Halo! Selamat datang di dunia Golang. Modul ini dibuat khusus untuk membantu kamu memahami struktur kode yang ada di proyek ini dengan cara yang sederhana, menggunakan analogi sehari-hari, dan penjelasan teknis yang mendalam.
+
+---
+
+## 1. Struktur Folder (The Blueprint)
+Bayangkan kamu sedang membangun sebuah gedung perkantoran. Kamu tidak akan menaruh semua barang di satu ruangan, kan? Kamu membaginya menjadi beberapa lantai dan ruangan sesuai fungsinya.
+
+- **cmd/**: Ini adalah "Pintu Masuk" utama. Di sini tempat kode yang bisa dijalankan (executable).
+- **internal/**: Ini adalah "Ruang Staf Khusus". Kode di sini hanya boleh digunakan di dalam proyek ini saja, orang luar tidak boleh meminjamnya.
+- **go.mod**: Ini adalah "Daftar Inventaris". Mencatat versi Go yang dipakai dan perpustakaan (library) apa saja yang kita pinjam dari internet.
+
+---
+
+## 2. go.mod (Identitas Proyek)
+**Analogi:** Seperti KTP dan Daftar Belanja.
+**Kegunaan:** Memberitahu komputer nama proyek kita (`github.com/justshev/go-micro-template`) dan versi Go yang dibutuhkan.
+
+---
+
+## 3. internal/config (Otak / Pengaturan)
+**File:** `internal/config/config.go`
+**Analogi:** Seperti "Buku Manual" atau "Remote Control".
+**Kegunaan:** 
+- Tempat kita mengatur variabel yang bisa berubah-ubah tanpa harus mengubah kode (misal: nomor port, level log).
+- Menggunakan `os.Getenv` untuk mengambil data dari lingkungan (Environment Variables). Jika tidak ada, dia punya nilai default (misal: port 8080).
+
+---
+
+## 4. internal/logger (Buku Harian / Jurnal)
+**File:** `internal/logger/logger.go`
+**Analogi:** Seperti "Kotak Hitam" di pesawat atau "CCTV".
+**Kegunaan:** 
+- Mencatat setiap kejadian penting dalam aplikasi.
+- `Info()`: Mencatat kejadian normal (misal: "Server jalan").
+- `Error()`: Mencatat jika ada masalah (misal: "Koneksi putus").
+- Membantu kita melacak masalah (debugging) di kemudian hari.
+
+---
+
+## 5. internal/httpserver (Resepsionis)
+**File:** `internal/httpserver/server.go`
+**Analogi:** Seperti "Meja Resepsionis" di hotel.
+**Kegunaan:** 
+- Tugasnya hanya satu: Menunggu tamu (request) datang dan mengarahkannya ke ruangan yang benar.
+- `New()`: Menyiapkan meja resepsionis.
+- `Start()`: Mulai membuka pintu untuk tamu.
+- `Shutdown()`: Menutup pintu dengan sopan saat jam kerja habis.
+
+---
+
+## 6. cmd/api (Kantor Depan / Customer Service)
+**File:** `cmd/api/main.go`
+**Analogi:** Seperti "Layanan Pelanggan" yang berinteraksi langsung dengan orang luar.
+**Kegunaan:** 
+- Ini adalah aplikasi yang melayani permintaan lewat internet (HTTP).
+- Punya jalur `/health`: Seperti dokter yang mengecek apakah aplikasi masih "hidup" atau tidak.
+- Menggabungkan semua komponen (config, logger, httpserver) menjadi satu kesatuan.
+
+---
+
+## 7. cmd/worker (Kantor Belakang / Buruh)
+**File:** `cmd/worker/main.go`
+**Analogi:** Seperti "Karyawan di Gudang" yang bekerja di belakang layar.
+**Kegunaan:** 
+- Dia tidak melayani tamu langsung, tapi mengerjakan tugas berat secara terus-menerus (misal: mengirim email massal, memproses data).
+- Di kode ini, dia menggunakan `time.Ticker` (seperti alarm) untuk melakukan tugas setiap 2 detik.
+
+---
+
+## 8. Graceful Shutdown (Pamitan yang Sopan)
+**Konsep:** Ada di `cmd/api/main.go` bagian `signal.Notify`.
+**Analogi:** Bayangkan kamu sedang makan di restoran, lalu restoran mau tutup.
+- **Biasa:** Lampu langsung dimatikan, kamu diusir paksa (Aplikasi mati mendadak, data bisa rusak).
+- **Graceful:** Pelayan bilang "Maaf kami mau tutup, silakan habiskan makanannya dulu" (Aplikasi menunggu proses selesai baru benar-benar mati).
+**Kegunaan:** Memastikan tidak ada data yang korup atau transaksi yang terputus di tengah jalan saat aplikasi dimatikan.
+
+---
+
+## Tips untuk Pemula:
+1. **Package main**: Setiap file yang ingin dijalankan harus punya `package main` dan fungsi `func main()`.
+2. **Error Handling**: Di Go, kita sering melihat `if err != nil`. Ini cara Go bilang "Cek dulu, ada masalah ga? Kalau ada, urus dulu!".
+3. **Goroutine (`go func()`)**: Ini cara Go melakukan dua hal atau lebih secara bersamaan (Multitasking).
+
+Semangat belajarnya! Kalau bingung, baca lagi analoginya ya.
