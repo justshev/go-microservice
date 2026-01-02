@@ -24,14 +24,8 @@ func main() {
 	log := logger.New(cfg.ServiceName)
 	log.Info("starting...")
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"ok"}`))
-	})
-
-	srv := httpserver.New(httpserver.Addr(cfg.HTTPPort), mux)
+	handler := httpserver.NewRouter()
+	srv := httpserver.New(httpserver.Addr(cfg.HTTPPort), handler)
 
 	// graceful shutdown
 	done := make(chan os.Signal, 1)
