@@ -4,16 +4,17 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog"
 )
 
-func NewRouter() http.Handler { 
+func NewRouter(baseLogger zerolog.Logger) http.Handler { 
 	r := chi.NewRouter()
-	SetupMiddleware(r)
+	SetupMiddleware(r, baseLogger)
 
 	//routes 
 	r.Get("/health",healthHandler)
 	r.Route("/v1",func (r chi.Router){
-		r.Get("/tasks",liskTaskHandler)
+		r.Get("/tasks",listTaskHandler)
 	})
 
 	return r
@@ -26,7 +27,7 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
 
-func liskTaskHandler(w http.ResponseWriter, r *http.Request){
+func listTaskHandler(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`{"tasks":[

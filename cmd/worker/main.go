@@ -18,7 +18,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	log := logger.New(cfg.ServiceName)
+	log := logger.New(cfg.ServiceName,cfg.LogLevel)
 	log.Info("starting...")
 
 	// Simulate worker loop (nanti diganti consume RabbitMQ di Minggu 4)

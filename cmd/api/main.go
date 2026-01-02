@@ -21,10 +21,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	log := logger.New(cfg.ServiceName)
+	log := logger.New(cfg.ServiceName,cfg.LogLevel)
 	log.Info("starting...")
 
-	handler := httpserver.NewRouter()
+	handler := httpserver.NewRouter(log.Raw())
 	srv := httpserver.New(httpserver.Addr(cfg.HTTPPort), handler)
 
 	// graceful shutdown
