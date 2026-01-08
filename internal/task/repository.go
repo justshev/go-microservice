@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type Repistory interface { 
+type Repository interface { 
 	List(ctx context.Context)([]Task,error)
 	Create(ctx context.Context,name string)(Task,error)
 }

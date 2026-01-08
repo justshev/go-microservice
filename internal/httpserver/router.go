@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/justshev/go-micro-template/internal/db"
 	"github.com/justshev/go-micro-template/internal/task"
 	"github.com/rs/zerolog"
 )
@@ -12,8 +13,13 @@ import (
 func NewRouter(baseLogger zerolog.Logger) http.Handler { 
 	r := chi.NewRouter()
 	SetupMiddleware(r, baseLogger)
-
-	taskRepo := task.NewMemoryRepo()
+	pg,err := db.NewPostgres(
+		"postgres://taskuser:taskpass@localhost:5432/taskdb?sslmode=disable",
+	)
+	if err != nil {
+		baseLogger.Fatal().Err(err).Msg("failed to connect to postgres")
+	}
+	taskRepo := task.NewPostgresRepo(pg)
 	taskService := task.NewService(taskRepo)
 
 	//routes 

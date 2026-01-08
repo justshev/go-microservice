@@ -9,10 +9,10 @@ import (
 var ErrInvalidName = errors.New("task name is required")
 
 type Service struct {
-	repo Repistory
+	repo Repository
 }
 
-func NewService(repo Repistory) *Service {
+func NewService(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 

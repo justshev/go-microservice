@@ -10,16 +10,19 @@ type Config struct {
 	ServiceName string
 	HTTPPort    int
 	LogLevel    string
+	DBURL	  string
 }
 
 func Load(serviceName string) (Config, error) {
 	port := getEnvInt("HTTP_PORT", 8080)
 	level := getEnv("LOG_LEVEL", "info")
+	dbURL := getEnv("DB_URL", "postgres://taskuser:taskpass@localhost:5432/taskdb?sslmode=disable")
 
 	cfg := Config{
 		ServiceName: serviceName,
 		HTTPPort:    port,
 		LogLevel:    level,
+		DBURL:       dbURL,
 	}
 
 	if cfg.HTTPPort <= 0 || cfg.HTTPPort > 65535 {

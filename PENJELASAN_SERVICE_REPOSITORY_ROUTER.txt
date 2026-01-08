@@ -1,0 +1,131 @@
+PENJELASAN SERVICE, REPOSITORY, ROUTER, DAN HANDLER (GO MICRO TEMPLATE)
+
+GAMBARAN BESAR (ANALOGI)
+Bayangkan aplikasi ini seperti restoran kecil:
+- Model Task = data pesanan di kertas order.
+- Repository = bagian dapur/gudang yang menyimpan data pesanan.
+- Service = koki/manager yang memeriksa aturan sebelum pesanan diproses.
+- Router + Handler = pelayan yang menerima permintaan pelanggan, lalu mengantar ke koki, dan membawa balik jawabannya.
+
+1) MODEL: internal/task/model.go
+Isi penting:
+- struct Task berisi data task: ID, Name, Completed, CreatedAt.
+Analogi: Task adalah formulir pesanan yang berisi nomor pesanan (ID), nama menu (Name), status sudah selesai atau belum (Completed), dan waktu dibuat (CreatedAt).
+
+2) REPOSITORY: internal/task/repository.go
+Repository adalah lapisan untuk menyimpan/mengambil data Task.
+Di file ini ada 2 hal utama:
+
+a) Interface Repistory
+```
+type Repistory interface {
+    List(ctx context.Context) ([]Task, error)
+    Create(ctx context.Context, name string) (Task, error)
+}
+```
+Artinya: "Setiap tempat penyimpanan Task harus bisa:
+- List: mengambil semua task
+- Create: membuat task baru"
+Analogi: Ini seperti SOP dapur. Siapa pun yang kerja di dapur harus bisa "mengambil daftar pesanan" dan "menambah pesanan".
+
+b) Implementasi MemoryRepo
+```
+type MemoryRepo struct {
+    mu sync.Mutex
+    nextID int64
+    tasks []Task
+}
+```
+Ini tempat penyimpanan sementara di RAM (bukan database).
+- mu (mutex) dipakai untuk mencegah data rusak ketika ada banyak request bersamaan.
+- nextID untuk memberi ID unik.
+- tasks adalah daftar task yang disimpan.
+
+NewMemoryRepo() membuat data awal:
+- Task 1 dan Task 2 disiapkan supaya ada contoh data.
+
+List():
+- Mengunci mutex, menyalin data tasks, lalu mengembalikan salinan.
+Analogi: dapur punya daftar pesanan, kamu foto copy dulu supaya daftar aslinya tidak berubah.
+
+Create():
+- Mengunci mutex, membuat task baru, menambahkannya ke list, mengembalikannya.
+Analogi: ada pesanan baru, ditulis di kertas baru, ditempel ke daftar pesanan.
+
+3) SERVICE: internal/task/service.go
+Service adalah "aturan bisnis" atau logika sebelum menyentuh repository.
+Service memegang repo:
+```
+type Service struct {
+    repo Repistory
+}
+```
+Analogi: service adalah manager yang memastikan pesanan valid sebelum ke dapur.
+
+NewService(repo Repistory):
+- Menerima repo dan menyimpannya.
+- Agar service bisa bekerja dengan repo mana pun (memory, database, dll).
+
+List(ctx):
+- Langsung memanggil repo.List().
+Analogi: manager meminta daftar pesanan dari dapur.
+
+Create(ctx, name):
+- Menghapus spasi di awal/akhir dengan strings.TrimSpace.
+- Jika name kosong, mengembalikan ErrInvalidName.
+- Jika valid, memanggil repo.Create().
+Analogi: manager mengecek apakah nama menu kosong; kalau kosong, pesanan ditolak. Kalau valid, diteruskan ke dapur.
+
+4) ROUTER DAN HANDLER: internal/httpserver/router.go
+Router adalah pengatur jalur URL, handler adalah fungsi yang menangani request di jalur itu.
+Di sini pakai chi router.
+
+NewRouter(baseLogger):
+- Membuat router baru dan setup middleware.
+- Membuat taskRepo (MemoryRepo) dan taskService.
+- Mendaftarkan routes:
+  - GET /health -> healthHandler
+  - GET /v1/tasks -> listTaskHandler
+  - POST /v1/tasks -> createTaskHandler
+Analogi: ini seperti menyiapkan meja layanan dan memberi petunjuk:
+"Jika ada pelanggan tanya kesehatan toko, arahkan ke meja A."
+"Jika pelanggan minta daftar pesanan, arahkan ke meja B."
+
+Handler detail:
+
+a) healthHandler
+- Mengembalikan JSON {"status":"ok"} dengan HTTP 200.
+Analogi: pelanggan tanya, "Toko buka?" Pelayan menjawab, "Buka, semuanya OK."
+
+b) listTaskHandler(svc)
+- Memanggil svc.List().
+- Jika error, kirim HTTP 500.
+- Jika sukses, kirim JSON berisi "tasks".
+Analogi: pelayan minta daftar pesanan ke manager, lalu menyerahkannya ke pelanggan.
+
+c) createTaskHandler(svc)
+- Membaca body JSON request, harus ada "name".
+- Jika format salah, HTTP 400.
+- Memanggil svc.Create().
+- Jika ErrInvalidName, HTTP 400 dengan pesan error.
+- Jika error lain, HTTP 500.
+- Jika sukses, HTTP 201 dengan task baru.
+Analogi: pelanggan menulis pesanan. Pelayan cek tulisannya. Jika kosong, ditolak. Jika valid, diteruskan ke manager/dapur lalu hasilnya dikembalikan.
+
+d) writeJSON
+- Helper untuk menulis response JSON dengan status tertentu.
+Analogi: cara standar pelayan menulis jawaban agar rapi.
+
+ALUR REQUEST (RINGKAS)
+1. Client memanggil endpoint (misal POST /v1/tasks).
+2. Router memilih handler yang sesuai.
+3. Handler membaca request lalu memanggil Service.
+4. Service memvalidasi aturan bisnis.
+5. Service memanggil Repository untuk simpan/ambil data.
+6. Handler mengembalikan hasil ke client.
+
+KESIMPULAN
+- Repository: fokus menyimpan data.
+- Service: fokus aturan bisnis.
+- Router/Handler: fokus menerima request dan mengembalikan response.
+Dengan pemisahan ini, kode lebih rapi dan mudah dikembangkan (misal ganti MemoryRepo ke database tanpa mengubah handler).
