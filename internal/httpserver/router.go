@@ -3,16 +3,25 @@ package httpserver
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/justshev/go-micro-template/internal/cache"
 	"github.com/justshev/go-micro-template/internal/db"
 	"github.com/justshev/go-micro-template/internal/task"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 )
 
 func NewRouter(baseLogger zerolog.Logger) http.Handler { 
+	rdb,err := cache.NewRedis("localhost:6379")
+	if err != nil {
+		panic(err)
+	}
 	r := chi.NewRouter()
+
 	SetupMiddleware(r, baseLogger)
+	r.Use(RateLimit(rdb,5,time.Minute))
 	pg,err := db.NewPostgres(
 		"postgres://taskuser:taskpass@localhost:5432/taskdb?sslmode=disable",
 	)
@@ -22,11 +31,12 @@ func NewRouter(baseLogger zerolog.Logger) http.Handler {
 	taskRepo := task.NewPostgresRepo(pg)
 	taskService := task.NewService(taskRepo)
 
+	
 	//routes 
 	r.Get("/health",healthHandler)
 	r.Route("/v1",func (r chi.Router){
-		r.Get("/tasks",listTaskHandler(taskService))
-		r.Post("/tasks",createTaskHandler(taskService))
+		r.Get("/tasks",listTaskHandler(taskService,rdb))
+		r.Post("/tasks",createTaskHandler(taskService,rdb))
 	})
 
 	return r
@@ -39,17 +49,34 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
 
-func listTaskHandler(svc *task.Service) http.HandlerFunc {
-return func (W http.ResponseWriter, r *http.Request){
-	tasks, err := svc.List(r.Context())
-	if err != nil {
-		http.Error(W, "failed to list tasks", http.StatusInternalServerError)
-		return
+func listTaskHandler(svc *task.Service, rdb *redis.Client) http.HandlerFunc {
+return func (w http.ResponseWriter, r *http.Request){
+	
+	cacheKey := "tasks:all"
+
+	val, err := rdb.Get(r.Context(),cacheKey).Result()
+	if err == nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(val))
+			return
 	}
-	writeJSON(W,http.StatusOK,map[string]any{
+	// miss cache
+	tasks, err := svc.List(r.Context())
+	if err != nil { 
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "internal_error"})
+			return
+	}
+	resp, _ := json.Marshal(map[string]any{
 		"tasks": tasks,
 	})
+	// set cache
+	_ = rdb.Set(r.Context(),cacheKey,string(resp),30*time.Second).Err()
 
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(resp)
 }
 }
 
@@ -57,7 +84,7 @@ type createTaskRequest struct {
 	Name string `json:"name"`
 }
 
-func createTaskHandler (svc *task.Service) http.HandlerFunc {
+func createTaskHandler (svc *task.Service, rdb *redis.Client) http.HandlerFunc {
 return func (W http.ResponseWriter, r *http.Request){
 	var req createTaskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -76,6 +103,8 @@ return func (W http.ResponseWriter, r *http.Request){
 		return
 
 	}
+
+	_ = rdb.Del(r.Context(),"tasks:all").Err()
 	writeJSON(W,http.StatusCreated,map[string]any{
 		"task": t,
 	})

@@ -11,18 +11,21 @@ type Config struct {
 	HTTPPort    int
 	LogLevel    string
 	DBURL	  string
+	RedisAddr string 
 }
 
 func Load(serviceName string) (Config, error) {
 	port := getEnvInt("HTTP_PORT", 8080)
 	level := getEnv("LOG_LEVEL", "info")
 	dbURL := getEnv("DB_URL", "postgres://taskuser:taskpass@localhost:5432/taskdb?sslmode=disable")
+	redisAddr := getEnv("REDDIS_ADDR","localhost:6379")
 
 	cfg := Config{
 		ServiceName: serviceName,
 		HTTPPort:    port,
 		LogLevel:    level,
 		DBURL:       dbURL,
+		RedisAddr: redisAddr,
 	}
 
 	if cfg.HTTPPort <= 0 || cfg.HTTPPort > 65535 {
