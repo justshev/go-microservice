@@ -12,6 +12,7 @@ type Config struct {
 	LogLevel    string
 	DBURL	  string
 	RedisAddr string 
+	AMQPURL	 string
 }
 
 func Load(serviceName string) (Config, error) {
@@ -19,6 +20,7 @@ func Load(serviceName string) (Config, error) {
 	level := getEnv("LOG_LEVEL", "info")
 	dbURL := getEnv("DB_URL", "postgres://taskuser:taskpass@localhost:5432/taskdb?sslmode=disable")
 	redisAddr := getEnv("REDDIS_ADDR","localhost:6379")
+	amqpURL := getEnv("AMQP_URL", "amqp://guest:guest@localhost:5672/")
 
 	cfg := Config{
 		ServiceName: serviceName,
@@ -26,6 +28,7 @@ func Load(serviceName string) (Config, error) {
 		LogLevel:    level,
 		DBURL:       dbURL,
 		RedisAddr: redisAddr,
+		AMQPURL: amqpURL,
 	}
 
 	if cfg.HTTPPort <= 0 || cfg.HTTPPort > 65535 {
